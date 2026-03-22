@@ -24,4 +24,4 @@ rsync -avz --delete "${RSYNC_EXCLUDE[@]}" \
   "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
 
 echo "同步完成。SSH 登录后执行:"
-echo "  cd ${REMOTE_DIR} && chmod +x deploy/server-release.sh && ./deploy/server-release.sh"
+echo "  cd ${REMOTE_DIR} && chmod +x deploy/selfblog.sh && USE_HTTPS=1 ./deploy/selfblog.sh release"

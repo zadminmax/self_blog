@@ -1,10 +1,7 @@
-# HTTPS：Nginx 终止 TLS，反代到 api:8080；证书由 certbot（webroot）签发。
-# 使用（与 cloud 一起）：
-#   docker compose -f docker-compose.yml -f deploy/docker-compose.cloud.yml -f deploy/docker-compose.https.yml --env-file .env up -d --build
-#
-# .env 需含 LE_DOMAIN（如 api.example.com）、申请证书用 LE_EMAIL。
-# 首次申请：./deploy/first-cert.sh
-# 续期：crontab 调用 ./deploy/renew-certs.sh（或手动执行）
+# HTTPS：Nginx 终止 TLS；配置由 deploy/selfblog.sh nginx-gen 写入 deploy/nginx/generated/
+#   USE_HTTPS=1 ./deploy/selfblog.sh release
+# 首次证书：./deploy/selfblog.sh first-cert
+# 续期：./deploy/selfblog.sh renew-certs
 
 volumes:
   certbot-www:
@@ -21,11 +18,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    # 用 env_file 注入 LE_DOMAIN，避免 compose 解析 ${LE_DOMAIN} 时未读到 .env 变成空串导致 server_name 非法
-    env_file:
-      - .env
     volumes:
-      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - ./deploy/nginx/generated:/etc/nginx/conf.d:ro
       - certbot-www:/var/www/certbot:ro
       - certbot-conf:/etc/letsencrypt:ro
     depends_on:

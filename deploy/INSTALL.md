@@ -86,6 +86,19 @@ nano .env
 
 部署前将 `PUBLIC_URL`、`CORS_ORIGINS` 改成最终 **https** 地址（可先填 http，证书就绪后再改并重启 API 容器）。
 
+### 同机部署官网（www）+ 管理端（admin）（可选）
+
+要求：与 **方案 B** 相同，且 **必须** `USE_HTTPS=1`。Nginx 会反代到容器 **`web`（Next.js）** 与 **`admin-site`（Vite 静态）**。
+
+| 变量 | 说明 |
+|------|------|
+| `WITH_SITES` | 填 `1` 启用 |
+| `SITE_ADMIN_HOST` | 管理端域名，如 `admin.example.com`（可只配这一项） |
+| `SITE_WWW_HOST` | 官网域名，如 `www.example.com`（可只配这一项） |
+| `SITE_WWW_PUBLIC_URL` | **仅在启用 www 时必填**，与浏览器访问官网的 URL 一致，如 `https://www.example.com`（供 Next 构建站点地图等） |
+
+**DNS**：`LE_DOMAIN` 与各 `SITE_*_HOST` 的 **A 记录** 均指向本机公网 IP。`./deploy/selfblog.sh first-cert`（或 `./deploy/first-cert.sh`）会为 **API 与各 `SITE_*` 主机名** 申请**同一张**证书（仍保存在 `live/<LE_DOMAIN>/` 下）。
+
 ---
 
 ## 四、部署命令（两种选一）
@@ -93,8 +106,10 @@ nano .env
 在项目根目录 `/opt/selfblog`：
 
 ```bash
-chmod +x deploy/server-release.sh deploy/first-cert.sh deploy/renew-certs.sh
+chmod +x deploy/selfblog.sh deploy/server-release.sh deploy/first-cert.sh deploy/renew-certs.sh
 ```
+
+统一部署入口为 **`./deploy/selfblog.sh`**（子命令 `release` / `first-cert` / `renew-certs`）；其余脚本为兼容旧路径的转发。
 
 ### 方案 A：仅 Docker API + Postgres（公网直接访问 8080）
 
@@ -102,7 +117,8 @@ chmod +x deploy/server-release.sh deploy/first-cert.sh deploy/renew-certs.sh
 - **勿**与本机 `go run ./cmd/api` 同时占用 8080。
 
 ```bash
-./deploy/server-release.sh
+./deploy/selfblog.sh release
+# 或: ./deploy/server-release.sh
 ```
 
 自检：
@@ -122,13 +138,13 @@ curl -sS http://127.0.0.1:8080/health
 3. 启动栈（API **不**映射宿主机 8080，只经 Nginx）：
 
 ```bash
-USE_HTTPS=1 ./deploy/server-release.sh
+USE_HTTPS=1 ./deploy/selfblog.sh release
 ```
 
 4. **首次**申请证书并切换 HTTPS 配置：
 
 ```bash
-./deploy/first-cert.sh
+./deploy/selfblog.sh first-cert
 ```
 
 5. 验证（**请把下面域名换成 `.env` 里 `LE_DOMAIN` 的真实值**；当前 shell 不会自动读取 `.env`，不要照抄 `${LE_DOMAIN}` 除非已 `export`）：
@@ -146,7 +162,7 @@ crontab -e
 增加一行（路径按实际修改）：
 
 ```cron
-0 4 * * * /opt/selfblog/deploy/renew-certs.sh >>/var/log/selfblog-cert.log 2>&1
+0 4 * * * /opt/selfblog/deploy/selfblog.sh renew-certs >>/var/log/selfblog-cert.log 2>&1
 ```
 
 ---
@@ -164,7 +180,7 @@ crontab -e
 ```bash
 cd /opt/selfblog
 git pull   # 或再次 rsync
-USE_HTTPS=1 ./deploy/server-release.sh   # 不用 HTTPS 则去掉环境变量
+USE_HTTPS=1 ./deploy/selfblog.sh release   # 不用 HTTPS 则去掉环境变量
 ```
 
 ---
@@ -172,7 +188,7 @@ USE_HTTPS=1 ./deploy/server-release.sh   # 不用 HTTPS 则去掉环境变量
 ## 七、可选：清理无用 Docker 镜像
 
 ```bash
-PRUNE_UNUSED_IMAGES=1 ./deploy/server-release.sh
+PRUNE_UNUSED_IMAGES=1 ./deploy/selfblog.sh release
 ```
 
 会删除**当前没有任何容器使用**的镜像（其他已停止项目的镜像也可能被删）。**不要**随意执行 `docker system prune -a --volumes`，以免删掉数据库卷。
@@ -194,7 +210,7 @@ PRUNE_UNUSED_IMAGES=1 ./deploy/server-release.sh
    浏览器报错时，检查 `CORS_ORIGINS` 是否包含前端页面的**完整源**（协议 + 域名 + 端口）。
 
 5. **Nginx 报 `invalid number of arguments in "server_name"`**  
-   根目录 `.env` 里缺少或未生效的 **`LE_DOMAIN=`**（`server_name` 为空）。填好后务必在**项目根目录**执行 `USE_HTTPS=1 ./deploy/server-release.sh`（`nginx` 的 `env_file` 相对根目录的 `.env`）。若已拉取含 `deploy/docker-compose.https.yml` 的更新，Nginx 会通过 `env_file` 读 `.env`，避免仅因 compose 插值未读到变量而传空。
+   根目录 `.env` 里缺少 **`LE_DOMAIN=`**（`server_name` 为空）。在**项目根目录**执行 `USE_HTTPS=1 ./deploy/selfblog.sh release` 会生成 `deploy/nginx/generated/` 下的配置；配置由 **`deploy/selfblog.sh`** 写入，不依赖 compose 对 `${LE_DOMAIN}` 的插值。
 
 6. **`docker compose ps` 只有 postgres、没有 api 或 api 为 Exited**  
    表示 **api 已崩溃退出**，先看日志（在项目根目录，与启动时相同的 `-f` / `--env-file`）：  

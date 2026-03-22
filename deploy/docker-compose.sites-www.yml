@@ -1,0 +1,19 @@
+# 与 https + cloud 一起使用；WITH_SITES=1 且 SITE_WWW_HOST 非空时追加。
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_URL}
+        NEXT_PUBLIC_SITE_URL: ${SITE_WWW_PUBLIC_URL}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+
+  nginx:
+    depends_on:
+      web:
+        condition: service_started
