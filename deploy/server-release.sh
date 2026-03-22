@@ -21,8 +21,8 @@ if [[ "${USE_HTTPS:-}" == "1" ]]; then
 fi
 "${COMPOSE[@]}" up -d --build
 
-echo "==> 状态"
-"${COMPOSE[@]}" ps
+echo "==> 状态（-a 含已退出的 api 容器）"
+"${COMPOSE[@]}" ps -a
 
 echo ""
 if [[ "${USE_HTTPS:-}" == "1" ]]; then

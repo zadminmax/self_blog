@@ -193,7 +193,12 @@ PRUNE_UNUSED_IMAGES=1 ./deploy/server-release.sh
 4. **跨域/CORS**  
    浏览器报错时，检查 `CORS_ORIGINS` 是否包含前端页面的**完整源**（协议 + 域名 + 端口）。
 
-5. **`curl: Could not resolve host: health`**  
+5. **`docker compose ps` 只有 postgres、没有 api 或 api 为 Exited**  
+   表示 **api 已崩溃退出**，先看日志（在项目根目录，与启动时相同的 `-f` / `--env-file`）：  
+   `docker compose -f docker-compose.yml -f deploy/docker-compose.cloud.yml --env-file .env logs api --tail 80`  
+   若带 HTTPS 再加 `-f deploy/docker-compose.https.yml`。常见原因：生产环境 **`JWT_SECRET` 未设置或为空**（会报 `JWT_SECRET must be set in production`）；**数据库连接失败**（`.env` 里 `POSTGRES_PASSWORD` 含 `#` 未加引号会导致解析错误）；**`POSTGRES_PASSWORD` 与库内已有数据不一致**（改密码后需删卷重建或改回一致）。
+
+6. **`curl: Could not resolve host: health`**  
    多半是执行了 `curl "https://${LE_DOMAIN}/health"`，但 shell 里**没有**变量 `LE_DOMAIN`（它只在 `.env` 里，Compose 会读，bash 默认不读）。请写成真实域名，例如 `curl -sS https://api.example.com/health`，或先：`export LE_DOMAIN=api.example.com`（与 `.env` 一致）。
 
 ---
