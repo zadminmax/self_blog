@@ -15,6 +15,21 @@ else
   exit 1
 fi
 
+# 与 first-cert.sh 一致：从 .env 取值（去引号）
+read_env_val() {
+  local k="$1"
+  grep -E "^${k}=" .env | tail -1 | sed "s/^${k}=//" | tr -d '\r' | sed 's/^"//;s/"$//;s/^'\''//;s/'\''$//'
+}
+if [[ "${USE_HTTPS:-}" == "1" ]]; then
+  _le_domain="$(read_env_val LE_DOMAIN)"
+  _le_email="$(read_env_val LE_EMAIL)"
+  if [[ -z "${_le_domain}" ]] || [[ -z "${_le_email}" ]]; then
+    echo "USE_HTTPS=1 时，项目根目录 .env 必须包含未注释的 LE_DOMAIN= 与 LE_EMAIL=（与 PUBLIC_URL 主机名一致，如 api.example.com）。"
+    echo "仅改 deploy/.env.production.example 无效，须 cp 为根目录 .env 并编辑。"
+    exit 1
+  fi
+fi
+
 echo "==> 构建并启动 selfblog（postgres 不映射宿主机端口）"
 if [[ "${USE_HTTPS:-}" == "1" ]]; then
   echo "    （USE_HTTPS=1：Nginx 80/443，API 仅内网；首次证书请执行 ./deploy/first-cert.sh）"

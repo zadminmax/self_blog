@@ -21,8 +21,9 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      LE_DOMAIN: ${LE_DOMAIN}
+    # 用 env_file 注入 LE_DOMAIN，避免 compose 解析 ${LE_DOMAIN} 时未读到 .env 变成空串导致 server_name 非法
+    env_file:
+      - .env
     volumes:
       - ./deploy/nginx/templates:/etc/nginx/templates:ro
       - certbot-www:/var/www/certbot:ro
