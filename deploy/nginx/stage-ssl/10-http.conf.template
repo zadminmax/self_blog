@@ -1,0 +1,13 @@
+# 阶段二（证书就绪后）：HTTP 仅保留验证路径，其余跳转到 HTTPS
+server {
+    listen 80;
+    server_name ${LE_DOMAIN};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}

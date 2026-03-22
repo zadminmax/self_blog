@@ -1,0 +1,41 @@
+# HTTPS：Nginx 终止 TLS，反代到 api:8080；证书由 certbot（webroot）签发。
+# 使用（与 cloud 一起）：
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.cloud.yml -f deploy/docker-compose.https.yml --env-file .env up -d --build
+#
+# .env 需含 LE_DOMAIN（如 api.example.com）、申请证书用 LE_EMAIL。
+# 首次申请：./deploy/first-cert.sh
+# 续期：crontab 调用 ./deploy/renew-certs.sh（或手动执行）
+
+volumes:
+  certbot-www:
+  certbot-conf:
+
+services:
+  api:
+    # 公网只走 80/443，不暴露 8080
+    ports: []
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      LE_DOMAIN: ${LE_DOMAIN}
+    volumes:
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      api:
+        condition: service_started
+
+  # 仅用于 `docker compose --profile cert run --rm certbot ...`，不会被 `up -d` 拉起
+  certbot:
+    image: certbot/certbot
+    profiles:
+      - cert
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
