@@ -1,0 +1,49 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  background: #f3f6fb;
+  color: #0f172a;
+}
+
+.admin-page-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.admin-page-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.admin-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.vditor-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}

@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.env.local
+*.log
+
+backend/bin/
+backend/api
+backend/data/
+*.db
+
+admin/node_modules/
+admin/dist/
+
+web/node_modules/
+web/.next/
+web/out/

@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --surface: #ffffff;
+  --muted: #78716c;
+  --radius-card: 0.75rem;
+}
+
+/* 列表变长时出现滚动条会占宽约 15px，导致切换「全部/筛选」时整页左右抖动；为滚动条预留槽位 */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
