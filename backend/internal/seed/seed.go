@@ -17,6 +17,7 @@ var defaultPermissions = []string{
 	"demo:manage", "demo:read",
 	"service:manage", "service:read",
 	"site:manage",
+	"login_security:read",
 }
 
 func Run(db *gorm.DB, cfg *config.Config) error {

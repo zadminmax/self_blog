@@ -7,7 +7,7 @@ type AuthState = {
   token: string | null
   user: User | null
   permissions: string[]
-  login: (u: string, p: string) => Promise<void>
+  login: (u: string, p: string, captcha: { captcha_id: string; slide_x: number }) => Promise<void>
   logout: () => void
   hasPerm: (p: string) => boolean
 }
@@ -35,8 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   })
 
-  const login = useCallback(async (username: string, password: string) => {
-    const res = await api.post('/api/v1/auth/login', { username, password })
+  const login = useCallback(async (username: string, password: string, captcha: { captcha_id: string; slide_x: number }) => {
+    const res = await api.post('/api/v1/auth/login', {
+      username,
+      password,
+      captcha_id: captcha.captcha_id,
+      slide_x: captcha.slide_x,
+    })
     const data = unwrap<{
       token: string
       permissions: string[]

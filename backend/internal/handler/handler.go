@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/selfblog/backend/internal/config"
+	"github.com/selfblog/backend/internal/security"
 	"github.com/selfblog/backend/internal/service"
 )
 
@@ -20,8 +21,9 @@ type Handler struct {
 	Users        *service.UserService
 	Roles        *service.RoleService
 	Perms        *service.PermissionService
+	LoginGuard   *security.AdminLoginGuard
 }
 
-func New(cfg *config.Config, auth *service.AuthService, posts *service.PostService, media *service.MediaService, demos *service.DemoService, services *service.ServiceOfferService, siteSettings *service.SiteSettingService, cats *service.CategoryService, tags *service.TagService, users *service.UserService, roles *service.RoleService, perms *service.PermissionService) *Handler {
-	return &Handler{Cfg: cfg, Auth: auth, Posts: posts, Media: media, Demos: demos, Services: services, SiteSettings: siteSettings, Cats: cats, Tags: tags, Users: users, Roles: roles, Perms: perms}
+func New(cfg *config.Config, auth *service.AuthService, posts *service.PostService, media *service.MediaService, demos *service.DemoService, services *service.ServiceOfferService, siteSettings *service.SiteSettingService, cats *service.CategoryService, tags *service.TagService, users *service.UserService, roles *service.RoleService, perms *service.PermissionService, loginGuard *security.AdminLoginGuard) *Handler {
+	return &Handler{Cfg: cfg, Auth: auth, Posts: posts, Media: media, Demos: demos, Services: services, SiteSettings: siteSettings, Cats: cats, Tags: tags, Users: users, Roles: roles, Perms: perms, LoginGuard: loginGuard}
 }

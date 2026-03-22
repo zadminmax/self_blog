@@ -10,6 +10,7 @@ import (
 	"github.com/selfblog/backend/internal/database"
 	"github.com/selfblog/backend/internal/handler"
 	"github.com/selfblog/backend/internal/middleware"
+	"github.com/selfblog/backend/internal/security"
 	"github.com/selfblog/backend/internal/seed"
 	"github.com/selfblog/backend/internal/service"
 	"github.com/selfblog/backend/internal/storage"
@@ -55,7 +56,8 @@ func main() {
 	userSvc := service.NewUserService(db, cfg)
 	roleSvc := service.NewRoleService(db)
 	permSvc := service.NewPermissionService(db)
-	h := handler.New(cfg, authSvc, postSvc, mediaSvc, demoSvc, serviceSvc, siteSvc, catSvc, tagSvc, userSvc, roleSvc, permSvc)
+	loginGuard := security.NewAdminLoginGuard()
+	h := handler.New(cfg, authSvc, postSvc, mediaSvc, demoSvc, serviceSvc, siteSvc, catSvc, tagSvc, userSvc, roleSvc, permSvc, loginGuard)
 
 	if cfg.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -73,10 +75,12 @@ func main() {
 
 	v1 := r.Group("/api/v1")
 	{
+		v1.GET("/auth/slider-captcha", h.SliderCaptcha)
 		v1.POST("/auth/login", h.Login)
 
 		pub := v1.Group("/public")
 		{
+			pub.GET("/slider-captcha", h.SliderCaptcha)
 			pub.GET("/posts", h.PublicPostList)
 			pub.GET("/posts/:slug", h.PublicPostGet)
 			pub.GET("/categories", h.CategoryList)
@@ -148,6 +152,9 @@ func main() {
 			adm.PUT("/roles/:id/permissions", middleware.RequirePermission("role:manage"), h.AdminRoleSetPermissions)
 
 			adm.GET("/permissions", middleware.RequirePermission("role:manage"), h.AdminPermissionList)
+
+			adm.GET("/login-security", middleware.RequirePermission("login_security:read"), h.AdminLoginSecurityGet)
+			adm.DELETE("/login-security/throttle", middleware.RequirePermission("user:manage"), h.AdminLoginSecurityClearThrottle)
 		}
 	}
 

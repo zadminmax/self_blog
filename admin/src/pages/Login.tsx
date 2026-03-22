@@ -1,13 +1,37 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Form, Input, Typography, message } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import api, { unwrap } from '../services/api'
+import { LoginSliderCaptcha } from '../components/LoginSliderCaptcha'
+
+type CaptchaPayload = { captcha_id: string; track_width: number }
 
 export default function LoginPage() {
   const { login, token } = useAuth()
   const nav = useNavigate()
   const [siteTitle, setSiteTitle] = useState('波波技术栈')
+  const [captcha, setCaptcha] = useState<CaptchaPayload | null>(null)
+  const [captchaLoading, setCaptchaLoading] = useState(true)
+  const [slideX, setSlideX] = useState(0)
+  const [sliderReset, setSliderReset] = useState(0)
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true)
+    try {
+      const res = await api.get('/api/v1/public/slider-captcha')
+      const data = unwrap<CaptchaPayload>(res)
+      setCaptcha(data)
+      setSlideX(0)
+      setSliderReset((k) => k + 1)
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '加载验证失败')
+      setCaptcha(null)
+    } finally {
+      setCaptchaLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
@@ -20,18 +44,31 @@ export default function LoginPage() {
   }, [])
 
   useEffect(() => {
+    void loadCaptcha()
+  }, [loadCaptcha])
+
+  useEffect(() => {
     if (token) {
       nav('/posts', { replace: true })
     }
   }, [token, nav])
 
   const onFinish = async (v: { username: string; password: string }) => {
+    if (!captcha?.captcha_id) {
+      message.error('验证未就绪，请稍后重试')
+      return
+    }
+    if (slideX < 1) {
+      message.error('请先将滑块拖至右侧')
+      return
+    }
     try {
-      await login(v.username, v.password)
+      await login(v.username, v.password, { captcha_id: captcha.captcha_id, slide_x: slideX })
       message.success('登录成功')
       nav('/posts', { replace: true })
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : '登录失败')
+      await loadCaptcha()
     }
   }
 
@@ -65,7 +102,21 @@ export default function LoginPage() {
           <Form.Item name="password" label="密码" rules={[{ required: true }]}>
             <Input.Password autoComplete="current-password" prefix={<LockOutlined />} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block>
+
+          <div style={{ marginBottom: 16 }}>
+            {captchaLoading || !captcha ? (
+              <Typography.Text type="secondary">正在加载验证…</Typography.Text>
+            ) : (
+              <LoginSliderCaptcha
+                trackWidth={captcha.track_width}
+                captchaId={captcha.captcha_id}
+                resetKey={sliderReset}
+                onSlideX={setSlideX}
+              />
+            )}
+          </div>
+
+          <Button type="primary" htmlType="submit" block disabled={captchaLoading || !captcha}>
             登录
           </Button>
         </Form>

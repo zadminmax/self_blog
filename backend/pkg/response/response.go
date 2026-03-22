@@ -36,6 +36,10 @@ func ErrForbidden(c *gin.Context, message string) {
 	Err(c, http.StatusForbidden, 403, message)
 }
 
+func ErrTooManyRequests(c *gin.Context, message string) {
+	Err(c, http.StatusTooManyRequests, 429, message)
+}
+
 func ErrNotFound(c *gin.Context, message string) {
 	Err(c, http.StatusNotFound, 404, message)
 }

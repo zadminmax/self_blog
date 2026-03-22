@@ -19,6 +19,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # 左侧为宿主机端口。若本机正在 `go run ./cmd/api` 且监听 8080，则宿主机 8080 会先到本机进程而非容器，
+    # 表现为容器里 curl 正常、宿主机 curl 404/旧路由。请先结束本机 api，或改为 "18080:8080" 并用该端口访问 API。
     ports:
       - "8080:8080"
     environment:

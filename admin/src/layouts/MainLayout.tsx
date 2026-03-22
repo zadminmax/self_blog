@@ -12,6 +12,7 @@ import {
   SafetyCertificateOutlined,
   PictureOutlined,
   GlobalOutlined,
+  RadarChartOutlined,
 } from '@ant-design/icons'
 import { useAuth } from '../auth'
 import { AdminLogoMark } from '../components/AdminLogoMark'
@@ -21,7 +22,7 @@ const { Header, Sider, Content } = Layout
 export default function MainLayout() {
   const nav = useNavigate()
   const loc = useLocation()
-  const { user, logout } = useAuth()
+  const { user, logout, hasPerm } = useAuth()
   const [brandName, setBrandName] = useState('波波技术栈')
 
   useEffect(() => {
@@ -54,7 +55,9 @@ export default function MainLayout() {
                     ? ['/users']
                     : loc.pathname.startsWith('/roles')
                       ? ['/roles']
-                      : []
+                      : loc.pathname.startsWith('/login-security')
+                        ? ['/login-security']
+                        : []
 
   const breadcrumbItems = [
     { title: <HomeOutlined /> },
@@ -80,7 +83,9 @@ export default function MainLayout() {
                         ? '管理员'
                         : selected[0] === '/roles'
                           ? '角色与权限'
-                          : '管理',
+                          : selected[0] === '/login-security'
+                            ? '登录安全'
+                            : '管理',
     },
   ]
 
@@ -120,6 +125,16 @@ export default function MainLayout() {
             { key: '/site-settings', icon: <GlobalOutlined />, label: '站点设置', onClick: () => nav('/site-settings') },
             { key: '/users', icon: <UserSwitchOutlined />, label: '管理员', onClick: () => nav('/users') },
             { key: '/roles', icon: <SafetyCertificateOutlined />, label: '角色与权限', onClick: () => nav('/roles') },
+            ...(hasPerm('login_security:read')
+              ? [
+                  {
+                    key: '/login-security',
+                    icon: <RadarChartOutlined />,
+                    label: '登录安全',
+                    onClick: () => nav('/login-security'),
+                  },
+                ]
+              : []),
           ]}
         />
       </Sider>

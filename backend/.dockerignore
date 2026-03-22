@@ -3,3 +3,5 @@ data/
 *.db
 .env
 .git
+# 本机 go build 生成的可执行文件，勿打进镜像；否则会增大 context 且易与「未重新编译」混淆
+api

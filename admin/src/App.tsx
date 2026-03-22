@@ -14,6 +14,7 @@ import DemoListPage from './pages/DemoListPage'
 import DemoCategoryPage from './pages/DemoCategoryPage'
 import ServiceOfferPage from './pages/ServiceOfferPage'
 import SiteSettingsPage from './pages/SiteSettingsPage'
+import LoginSecurityPage from './pages/LoginSecurityPage'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="site-settings" element={<SiteSettingsPage />} />
         <Route path="users" element={<AdminUserPage />} />
         <Route path="roles" element={<RolePermissionPage />} />
+        <Route path="login-security" element={<LoginSecurityPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/posts" replace />} />
     </Routes>
