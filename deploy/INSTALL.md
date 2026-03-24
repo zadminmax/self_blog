@@ -1,225 +1,124 @@
-# 云服务器完整安装步骤（Docker）
+# 生产部署（单服务器 · Docker · HTTPS）
 
-面向：**Linux 云主机**（Ubuntu / Debian / 阿里云 / 腾讯云等），部署 **Postgres + API**，可选 **Nginx + HTTPS（Let’s Encrypt / certbot）**。
+仅支持：**一台 Linux 云主机**上同时跑 **Postgres、API、管理端静态、Next 官网、Nginx 终止 TLS**，证书 **Let’s Encrypt**。
 
 ---
 
-## 一、服务器准备
+## 1. 服务器环境
 
-### 1. 系统与权限
-
-- 推荐：**Ubuntu 22.04 LTS** 或同类 Debian 系。
-- 登录方式：**SSH 密钥**（私钥权限 `chmod 600`）。
-
-### 2. 安装 Docker
+- Ubuntu 22.04 等；安装 Docker 与 Compose 插件，当前用户加入 `docker` 组。
+- 安全组放行 **TCP 80、443**。
+- `LE_DOMAIN`、`SITE_ADMIN_HOST`、`SITE_WWW_HOST` 的 **A 记录** 均指向本机公网 IP。
 
 ```bash
-sudo apt update
-sudo apt install -y docker.io docker-compose-plugin git
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin git
 sudo systemctl enable --now docker
 ```
 
-验证：
+---
+
+## 2. 本机：先编辑再构建（再同步）
+
+在**开发机**仓库根目录，**须先于 rsync** 完成（否则没有 `deploy/artifacts/`）：
 
 ```bash
-docker --version
-docker compose version
+cp deploy/.env.build.example deploy/.env.build
+# 填写与线上一致的 https 地址（须与服务器 .env 里的公网域名一致，见 deploy/.env.build.example）
+
+chmod +x deploy/build.sh
+./deploy/build.sh
 ```
 
-若当前用户不在 `docker` 组：
+会生成：
 
-```bash
-sudo usermod -aG docker "$USER"
-# 重新登录 SSH 后生效
-```
-
-### 3. 安全组 / 防火墙（云控制台）
-
-| 场景 | 需放行端口 |
-|------|------------|
-| 仅 HTTP API | **TCP 8080**（或见下文「仅内网 API」） |
-| 带 Nginx + HTTPS | **TCP 80、443**（申请/续签证书通常需要 80） |
+- `deploy/artifacts/api` — Linux amd64 可执行文件  
+- `deploy/artifacts/admin` — 管理端静态目录  
+- `deploy/artifacts/web` — Next standalone（含 `server.js`）
 
 ---
 
-## 二、获取项目代码
+## 3. 同步到服务器
 
-任选其一。
+**方式 A**：在服务器 `git clone` 到如 `/opt/selfblog`。若不在本机构建，须在服务器自行生成 `deploy/artifacts/`（不推荐，与本文档主流程不一致）。
 
-**Git：**
+**方式 B（推荐）**：在本机**编辑好** rsync 脚本后再执行同步（只传 Docker 所需路径：`deploy/`、`admin/docker/`、根目录 `.dockerignore`，不含 backend/web/admin 源码）：
 
 ```bash
-sudo mkdir -p /opt
-sudo chown "$USER:$USER" /opt
-cd /opt
-git clone <你的仓库地址> selfblog
-cd selfblog
+cp deploy/rsync-upload.example.sh deploy/rsync-upload.local.sh
+chmod +x deploy/rsync-upload.local.sh
+# 编辑 REMOTE_USER、REMOTE_HOST、REMOTE_DIR、SSH_IDENTITY 等
+./deploy/rsync-upload.local.sh
 ```
 
-**本机 rsync 到服务器：** 复制 `deploy/rsync-upload.example.sh`，修改 `REMOTE_USER`、`REMOTE_HOST`、`REMOTE_DIR` 后在本机执行。
+若服务器上曾用旧脚本整仓同步过，可能仍留有 `backend/`、`web/` 等，可在 SSH 上手动删掉以省磁盘。
 
 ---
 
-## 三、环境变量 `.env`
+## 4. 服务器：配置与启动
+
+同步完成后，在服务器**编辑**根目录 `.env`，再启动：
 
 ```bash
-cd /opt/selfblog
+cd /opt/selfblog   # 与 rsync 里 REMOTE_DIR 一致
 cp deploy/.env.production.example .env
-nano .env
+nano .env          # POSTGRES_PASSWORD、JWT_SECRET、PUBLIC_URL、CORS_ORIGINS、域名与邮箱等
+chmod +x deploy/*.sh
+./deploy/up.sh
 ```
 
-### 必填项说明
-
-| 变量 | 说明 |
-|------|------|
-| `POSTGRES_PASSWORD` | 数据库密码；含 `#`、空格时请加引号，如 `'Abcd#1234'` |
-| `JWT_SECRET` | 随机长串；生产勿用默认值 |
-| `PUBLIC_URL` | 浏览器/API 对外根地址，无尾部 `/`，如 `https://api.example.com` |
-| `CORS_ORIGINS` | 允许跨域的前端源，逗号分隔，须与真实访问域名一致 |
-
-### 使用 HTTPS（Nginx + certbot）时额外必填
-
-| 变量 | 说明 |
-|------|------|
-| `LE_DOMAIN` | 与证书一致的主机名，如 `api.example.com`，**DNS A 记录须指向本机公网 IP** |
-| `LE_EMAIL` | Let’s Encrypt 联系邮箱 |
-
-部署前将 `PUBLIC_URL`、`CORS_ORIGINS` 改成最终 **https** 地址（可先填 http，证书就绪后再改并重启 API 容器）。
-
-### 同机部署官网（www）+ 管理端（admin）（可选）
-
-要求：与 **方案 B** 相同，且 **必须** `USE_HTTPS=1`。Nginx 会反代到容器 **`web`（Next.js）** 与 **`admin-site`（Vite 静态）**。
-
-| 变量 | 说明 |
-|------|------|
-| `WITH_SITES` | 填 `1` 启用 |
-| `SITE_ADMIN_HOST` | 管理端域名，如 `admin.example.com`（可只配这一项） |
-| `SITE_WWW_HOST` | 官网域名，如 `www.example.com`（可只配这一项） |
-| `SITE_WWW_PUBLIC_URL` | **仅在启用 www 时必填**，与浏览器访问官网的 URL 一致，如 `https://www.example.com`（供 Next 构建站点地图等） |
-
-**DNS**：`LE_DOMAIN` 与各 `SITE_*_HOST` 的 **A 记录** 均指向本机公网 IP。`./deploy/selfblog.sh first-cert`（或 `./deploy/first-cert.sh`）会为 **API 与各 `SITE_*` 主机名** 申请**同一张**证书（仍保存在 `live/<LE_DOMAIN>/` 下）。
+`up.sh` 会生成 Nginx 配置并执行 compose（带 `--project-directory` 指向**仓库根**，避免把 `deploy/` 当成项目根而出现 `deploy/deploy` 路径错误）。
 
 ---
 
-## 四、部署命令（两种选一）
+## 5. 首次 HTTPS 证书
 
-在项目根目录 `/opt/selfblog`：
+**先满足：**
 
-```bash
-chmod +x deploy/selfblog.sh deploy/server-release.sh deploy/first-cert.sh deploy/renew-certs.sh
-```
+1. **DNS**：在域名服务商处为 `.env` 里的 `LE_DOMAIN`、`SITE_ADMIN_HOST`、`SITE_WWW_HOST` 各添加 **A 记录**，指向本机**公网 IPv4**（需要 IPv6 时再配 AAAA）。未解析或 `NXDOMAIN` 时 Let’s Encrypt 会直接失败，与 Nginx 无关。
+2. **解析生效**：可用本机或 [Google Dig](https://dns.google/query) 查询，例如 `dig +short api.example.com` 应返回服务器 IP。
+3. **80 端口**：安全组/防火墙对公网放行 **TCP 80**（HTTP-01 校验用）。
 
-统一部署入口为 **`./deploy/selfblog.sh`**（子命令 `release` / `first-cert` / `renew-certs`）；其余脚本为兼容旧路径的转发。
-
-### 方案 A：仅 Docker API + Postgres（公网直接访问 8080）
-
-- 安全组放行 **8080**。
-- **勿**与本机 `go run ./cmd/api` 同时占用 8080。
+然后再执行：
 
 ```bash
-./deploy/selfblog.sh release
-# 或: ./deploy/server-release.sh
+./deploy/cert-init.sh
 ```
 
-自检：
+完成后若刚调整过 `PUBLIC_URL` / `CORS_ORIGINS`，执行：
 
 ```bash
-curl -sS http://127.0.0.1:8080/health
+cd /opt/selfblog   # 仓库根
+docker compose --project-directory "$(pwd)" -f deploy/docker-compose.prod.yml --env-file .env restart api
 ```
 
-公网：`http://<服务器IP>:8080/health`。
-
-### 方案 B：Nginx 80/443 + HTTPS（推荐生产）
-
-1. 安全组放行 **80、443**；域名解析到本机。
-
-2. 在 `.env` 中填写 `LE_DOMAIN`、`LE_EMAIL`，并配置好 `PUBLIC_URL`（https）、`CORS_ORIGINS`。
-
-3. 启动栈（API **不**映射宿主机 8080，只经 Nginx）：
-
-```bash
-USE_HTTPS=1 ./deploy/selfblog.sh release
-```
-
-4. **首次**申请证书并切换 HTTPS 配置：
-
-```bash
-./deploy/selfblog.sh first-cert
-```
-
-5. 验证（**请把下面域名换成 `.env` 里 `LE_DOMAIN` 的真实值**；当前 shell 不会自动读取 `.env`，不要照抄 `${LE_DOMAIN}` 除非已 `export`）：
-
-```bash
-curl -sS https://api.example.com/health
-```
-
-6. **自动续期**（示例：每天 4 点）：
-
-```bash
-crontab -e
-```
-
-增加一行（路径按实际修改）：
+**续期**（示例每天 4 点）：
 
 ```cron
-0 4 * * * /opt/selfblog/deploy/selfblog.sh renew-certs >>/var/log/selfblog-cert.log 2>&1
+0 4 * * * /opt/selfblog/deploy/cert-renew.sh >>/var/log/selfblog-cert.log 2>&1
 ```
 
 ---
 
-## 五、默认管理员与后续
+## 6. 更新发版
 
-- 种子账号来自 `.env` 中 `ADMIN_SEED_USER` / `ADMIN_SEED_PASSWORD`（默认 `admin` / `admin123`），**仅在首次创建库时写入**；已有数据库不会自动改密码。
-- 登录管理后台前，需自行构建并托管 **admin（Vite）**、**web（Next）** 静态资源或单独容器；本仓库当前 `docker-compose` **仅包含 API + Postgres（+ 可选 Nginx）**。
-- 管理端开发时通过 `VITE_API_URL` 指向上述 API 根地址；生产同理。
+本机改代码后：**编辑/确认** `deploy/.env.build`（若域名有变）→ `./deploy/build.sh` → **编辑/确认** rsync 脚本 → `./deploy/rsync-upload.local.sh` → 服务器 `./deploy/up.sh`。
 
 ---
 
-## 六、更新版本
+## 7. 常用自检
 
 ```bash
 cd /opt/selfblog
-git pull   # 或再次 rsync
-USE_HTTPS=1 ./deploy/selfblog.sh release   # 不用 HTTPS 则去掉环境变量
+docker compose --project-directory "$(pwd)" -f deploy/docker-compose.prod.yml --env-file .env ps -a
+docker compose --project-directory "$(pwd)" -f deploy/docker-compose.prod.yml --env-file .env logs api --tail 80
 ```
 
----
+证书申请失败：查域名解析、80 是否对外开放、`.env` 中域名是否与访问一致。
 
-## 七、可选：清理无用 Docker 镜像
-
-```bash
-PRUNE_UNUSED_IMAGES=1 ./deploy/selfblog.sh release
-```
-
-会删除**当前没有任何容器使用**的镜像（其他已停止项目的镜像也可能被删）。**不要**随意执行 `docker system prune -a --volumes`，以免删掉数据库卷。
+跨域问题：核对 `CORS_ORIGINS` 是否包含前端页面的完整源（协议 + 主机 + 端口）。
 
 ---
 
-## 八、常见问题
+## 8. 与本地开发的区别
 
-1. **`curl` 本机 404，容器里正常**  
-   宿主机 **8080** 被本机 `go run` 等进程占用，请求未进 Docker。结束本机进程或改用 `USE_HTTPS=1` 只走 80/443。
-
-2. **`docker compose build` 一直 0 秒、代码未更新**  
-   执行：`docker compose build --no-cache api` 后再 `up -d`。
-
-3. **Let’s Encrypt 失败**  
-   检查域名解析、80 端口是否对公网开放、`.env` 中 `LE_DOMAIN` 是否与访问域名一致。
-
-4. **跨域/CORS**  
-   浏览器报错时，检查 `CORS_ORIGINS` 是否包含前端页面的**完整源**（协议 + 域名 + 端口）。
-
-5. **Nginx 报 `invalid number of arguments in "server_name"`**  
-   根目录 `.env` 里缺少 **`LE_DOMAIN=`**（`server_name` 为空）。在**项目根目录**执行 `USE_HTTPS=1 ./deploy/selfblog.sh release` 会生成 `deploy/nginx/generated/` 下的配置；配置由 **`deploy/selfblog.sh`** 写入，不依赖 compose 对 `${LE_DOMAIN}` 的插值。
-
-6. **`docker compose ps` 只有 postgres、没有 api 或 api 为 Exited**  
-   表示 **api 已崩溃退出**，先看日志（在项目根目录，与启动时相同的 `-f` / `--env-file`）：  
-   `docker compose -f docker-compose.yml -f deploy/docker-compose.cloud.yml --env-file .env logs api --tail 80`  
-   若带 HTTPS 再加 `-f deploy/docker-compose.https.yml`。常见原因：生产环境 **`JWT_SECRET` 未设置或为空**（会报 `JWT_SECRET must be set in production`）；**数据库连接失败**（`.env` 里 `POSTGRES_PASSWORD` 含 `#` 未加引号会导致解析错误）；**`POSTGRES_PASSWORD` 与库内已有数据不一致**（改密码后需删卷重建或改回一致）。
-
-7. **`curl: Could not resolve host: health`**  
-   多半是执行了 `curl "https://${LE_DOMAIN}/health"`，但 shell 里**没有**变量 `LE_DOMAIN`（它只在 `.env` 里，Compose 会读，bash 默认不读）。请写成真实域名，例如 `curl -sS https://api.example.com/health`，或先：`export LE_DOMAIN=api.example.com`（与 `.env` 一致）。
-
----
-
-更省事的「从本机同步代码」示例见：`deploy/rsync-upload.example.sh`。
+仓库根目录 `docker-compose.yml` 仅供本机开发（Postgres + 源码构建 API）。**生产**只用 `deploy/docker-compose.prod.yml` 与上文脚本。

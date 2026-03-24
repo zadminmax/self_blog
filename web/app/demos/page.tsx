@@ -1,9 +1,25 @@
-import { fetchDemoList, type PublicDemoListItem } from "@/lib/api"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { fetchDemoList, fetchSiteSettings, type PublicDemoListItem } from "@/lib/api"
 import { DemoCard } from "@/components/DemoCard"
 
-export const metadata = {
-  title: "Demo",
-  description: "可运行的 Demo 原型集合",
+type Props = { searchParams: { category?: string } }
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const site = await fetchSiteSettings()
+  const category = searchParams.category?.trim()
+  if (!category) {
+    return {
+      title: "Demo",
+      description: "可运行的 Demo 原型集合",
+      alternates: { canonical: "/demos" },
+    }
+  }
+  return {
+    title: `Demo · 分类：${category}`,
+    description: `${site.site_name} Demo 列表，当前分类「${category}」。`,
+    alternates: { canonical: `/demos?category=${encodeURIComponent(category)}` },
+  }
 }
 
 async function fetchAllDemos(): Promise<PublicDemoListItem[]> {
@@ -39,9 +55,11 @@ function groupByCategory(items: PublicDemoListItem[]) {
   return keys.map((name) => ({ name, items: map.get(name)! }))
 }
 
-export default async function DemosPage() {
+export default async function DemosPage({ searchParams }: Props) {
   const items = await fetchAllDemos()
   const groups = groupByCategory(items)
+  const selectedCategory = searchParams.category?.trim()
+  const displayGroups = selectedCategory ? groups.filter((g) => g.name === selectedCategory) : groups
 
   return (
     <div className="space-y-12">
@@ -50,16 +68,43 @@ export default async function DemosPage() {
         <p className="max-w-2xl text-pretty text-stone-600">
           按分类浏览项目原型。卡片展示标题、封面与简介；点击在新标签页打开运行页。
         </p>
-        <p className="text-sm text-stone-500">共 {items.length} 个</p>
+        <p className="text-sm text-stone-500">
+          共 {items.length} 个{selectedCategory ? `，分类「${selectedCategory}」` : ""}
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Link
+            href="/demos"
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              selectedCategory
+                ? "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                : "bg-sky-100 font-medium text-sky-800 ring-1 ring-sky-200/60"
+            }`}
+          >
+            全部
+          </Link>
+          {groups.map((g) => (
+            <Link
+              key={g.name}
+              href={`/demos?category=${encodeURIComponent(g.name)}`}
+              className={`rounded-full px-3 py-1.5 text-sm transition ${
+                selectedCategory === g.name
+                  ? "bg-sky-100 font-medium text-sky-800 ring-1 ring-sky-200/60"
+                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+              }`}
+            >
+              {g.name}
+            </Link>
+          ))}
+        </div>
       </header>
 
-      {groups.length === 0 ? (
+      {displayGroups.length === 0 ? (
         <p className="rounded-lg border border-dashed border-stone-200 bg-white py-12 text-center text-stone-500">
-          暂无 Demo。
+          暂无符合当前分类的 Demo。
         </p>
       ) : (
         <div className="space-y-14">
-          {groups.map((g) => (
+          {displayGroups.map((g) => (
             <section key={g.name} className="space-y-5">
               <div className="flex flex-wrap items-baseline gap-3 border-b border-stone-100 pb-3">
                 <h2 className="text-xl font-semibold text-stone-900">{g.name}</h2>

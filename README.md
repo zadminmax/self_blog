@@ -36,7 +36,8 @@ go run ./cmd/api
 | `HTTP_ADDR` | 监听地址，默认 `:8080` |
 | `USE_SQLITE` | `true`/`false`，默认 `true` |
 | `SQLITE_PATH` | SQLite 路径，默认 `data/selfblog.db` |
-| `DATABASE_URL` | 若设置则使用 PostgreSQL（并自动关闭 SQLite） |
+| `DATABASE_URL` | 若设置则使用 PostgreSQL（密码须 URL 编码；含 `#` 等时建议改用下面 `DB_*`） |
+| `DB_HOST` | 与 `DB_USER` / `DB_PASSWORD` / `DB_NAME` 等分项组装连接串（Docker 生产默认如此，密码可含特殊字符） |
 | `JWT_SECRET` | JWT 密钥 |
 | `PUBLIC_URL` | 对外访问 API 的根 URL（用于拼接上传文件 URL），默认 `http://localhost:8080` |
 | `CORS_ORIGINS` | 逗号分隔，默认含 `http://localhost:5173` 与 `http://localhost:3000` |

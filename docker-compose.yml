@@ -1,3 +1,4 @@
+# 本地开发：Postgres + 源码构建 API。生产单服务器（HTTPS、三站点）见 deploy/INSTALL.md。
 services:
   postgres:
     image: postgres:16-alpine
@@ -27,7 +28,12 @@ services:
       APP_ENV: ${APP_ENV:-development}
       HTTP_ADDR: ":8080"
       USE_SQLITE: "false"
-      DATABASE_URL: postgres://selfblog:${POSTGRES_PASSWORD:-selfblog}@postgres:5432/selfblog?sslmode=disable
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: selfblog
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-selfblog}
+      DB_NAME: selfblog
+      DB_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET:-docker-dev-change-me}
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
       UPLOAD_DIR: /app/data/uploads

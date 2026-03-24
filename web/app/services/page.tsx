@@ -1,8 +1,24 @@
-import { fetchServiceList, resolveMediaUrl, type PublicServiceOffer } from "@/lib/api"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { fetchServiceList, fetchSiteSettings, resolveMediaUrl, type PublicServiceOffer } from "@/lib/api"
 
-export const metadata = {
-  title: "技术服务",
-  description: "我们提供的技术服务与报价",
+type Props = { searchParams: { category?: string } }
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const site = await fetchSiteSettings()
+  const category = searchParams.category?.trim()
+  if (!category) {
+    return {
+      title: "技术服务",
+      description: "我们提供的技术服务与报价",
+      alternates: { canonical: "/services" },
+    }
+  }
+  return {
+    title: `技术服务 · 分类：${category}`,
+    description: `${site.site_name} 技术服务列表，当前分类「${category}」。`,
+    alternates: { canonical: `/services?category=${encodeURIComponent(category)}` },
+  }
 }
 
 function groupByCategory(items: PublicServiceOffer[]) {
@@ -16,7 +32,7 @@ function groupByCategory(items: PublicServiceOffer[]) {
   return keys.map((name) => ({ name, items: map.get(name)! }))
 }
 
-export default async function ServicesPage() {
+export default async function ServicesPage({ searchParams }: Props) {
   let items: PublicServiceOffer[] = []
   try {
     items = await fetchServiceList()
@@ -25,21 +41,48 @@ export default async function ServicesPage() {
   }
 
   const groups = groupByCategory(items)
+  const selectedCategory = searchParams.category?.trim()
+  const displayGroups = selectedCategory ? groups.filter((g) => g.name === selectedCategory) : groups
 
   return (
     <div className="space-y-12">
       <header className="space-y-3 border-b border-stone-200 pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">服务与报价</h1>
         <p className="max-w-2xl text-pretty text-stone-600">服务说明、交付内容与参考报价。具体以沟通为准。</p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Link
+            href="/services"
+            className={`rounded-full px-3 py-1.5 text-sm transition ${
+              selectedCategory
+                ? "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                : "bg-sky-100 font-medium text-sky-800 ring-1 ring-sky-200/60"
+            }`}
+          >
+            全部
+          </Link>
+          {groups.map((g) => (
+            <Link
+              key={g.name}
+              href={`/services?category=${encodeURIComponent(g.name)}`}
+              className={`rounded-full px-3 py-1.5 text-sm transition ${
+                selectedCategory === g.name
+                  ? "bg-sky-100 font-medium text-sky-800 ring-1 ring-sky-200/60"
+                  : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+              }`}
+            >
+              {g.name}
+            </Link>
+          ))}
+        </div>
       </header>
 
-      {groups.length === 0 ? (
+      {displayGroups.length === 0 ? (
         <p className="rounded-lg border border-dashed border-stone-200 bg-white py-12 text-center text-stone-500">
-          暂无服务内容。
+          暂无符合当前分类的服务内容。
         </p>
       ) : (
         <div className="space-y-14">
-          {groups.map((g) => (
+          {displayGroups.map((g) => (
             <section key={g.name} className="space-y-6">
               <h2 className="text-lg font-semibold text-stone-800">{g.name}</h2>
               <div className="grid gap-6 lg:grid-cols-2">

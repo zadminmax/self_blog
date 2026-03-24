@@ -70,28 +70,30 @@ export default async function HomePage() {
             {site.site_tagline ? ` · ${site.site_tagline}` : ""}
           </p>
           <h1 className="text-balance text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-            文章、Demo 与技术服务，一套界面多端适配
+            {site.home_hero_title}
           </h1>
           <p className="max-w-xl text-pretty text-base leading-relaxed text-stone-600 sm:text-lg">
-            聚焦可落地的方案与可运行的示例，数据来自自建 API；首页展示最新文章摘要、精选 Demo 与报价服务入口。
+            {site.home_hero_lead}
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Link
               href="/posts"
               className="inline-flex items-center justify-center rounded-lg bg-[var(--accent)] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[var(--accent-hover)]"
             >
-              全部文章
+              {site.home_hero_btn_posts}
             </Link>
             <Link
               href="/demos"
               className="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-[var(--surface)] px-5 py-2.5 text-sm font-medium text-stone-800 transition hover:border-stone-400 hover:bg-stone-50"
             >
-              浏览 Demo
+              {site.home_hero_btn_demos}
             </Link>
           </div>
         </div>
         <div className="rounded-[var(--radius-card)] border border-stone-200/90 bg-[var(--surface)] p-5 shadow-sm sm:p-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">站内导览</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            {site.home_sidebar_nav_title}
+          </h2>
           <ul className="mt-4 space-y-3 text-sm text-stone-700">
             <li className="flex justify-between gap-4 border-b border-stone-100 pb-3">
               <span className="text-stone-500">文章</span>
@@ -124,8 +126,8 @@ export default async function HomePage() {
       {(tags.length > 0 || categories.length > 0) && (
         <section className="space-y-3.5">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold text-stone-900">标签与分类</h2>
-            <p className="text-sm text-stone-500">点击可筛选文章列表</p>
+            <h2 className="text-lg font-semibold text-stone-900">{site.home_section_tags_title}</h2>
+            <p className="text-sm text-stone-500">{site.home_section_tags_hint}</p>
           </div>
           <div className="flex flex-wrap gap-2.5" aria-label="标签与分类">
             {categories.map((c) => (
@@ -152,9 +154,9 @@ export default async function HomePage() {
 
       <section className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="text-xl font-semibold text-stone-900">最新文章</h2>
+          <h2 className="text-xl font-semibold text-stone-900">{site.home_section_posts_title}</h2>
           <Link href="/posts" className="text-sm font-medium text-[var(--accent)] hover:underline">
-            查看全部
+            {site.home_section_posts_more}
           </Link>
         </div>
         {homePosts.length === 0 ? (
@@ -173,9 +175,9 @@ export default async function HomePage() {
 
       <section className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="text-xl font-semibold text-stone-900">精选 Demo</h2>
+          <h2 className="text-xl font-semibold text-stone-900">{site.home_section_demos_title}</h2>
           <Link href="/demos" className="text-sm font-medium text-[var(--accent)] hover:underline">
-            全部 Demo
+            {site.home_section_demos_more}
           </Link>
         </div>
         {demoItems.length === 0 ? (
@@ -194,11 +196,11 @@ export default async function HomePage() {
       <section className="space-y-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-stone-900">服务内容</h2>
-            <p className="mt-1 text-sm text-stone-500">按后台排序展示前 6 项，完整说明见服务页</p>
+            <h2 className="text-xl font-semibold text-stone-900">{site.home_section_services_title}</h2>
+            <p className="mt-1 text-sm text-stone-500">{site.home_section_services_sub}</p>
           </div>
           <Link href="/services" className="text-sm font-medium text-[var(--accent)] hover:underline">
-            服务与报价
+            {site.home_section_services_more}
           </Link>
         </div>
         {services.length === 0 ? (
@@ -211,22 +213,22 @@ export default async function HomePage() {
       </section>
 
       <section className="rounded-2xl bg-gradient-to-br from-[var(--accent)] to-sky-600 px-6 py-12 text-center shadow-md sm:px-10 sm:py-14">
-        <h2 className="text-xl font-semibold text-white sm:text-2xl">需要定制开发或技术咨询？</h2>
+        <h2 className="text-xl font-semibold text-white sm:text-2xl">{site.home_promo_title}</h2>
         <p className="mx-auto mt-3 max-w-lg text-pretty text-sm leading-relaxed text-blue-100 sm:text-base">
-          查看报价与交付说明，或通过关于页了解背景与联系方式（可按你的实际业务再扩展）。
+          {site.home_promo_lead}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/services"
             className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-[var(--accent)] shadow-sm transition hover:bg-blue-50"
           >
-            查看服务报价
+            {site.home_promo_btn_services}
           </Link>
           <Link
             href="/about"
             className="inline-flex items-center justify-center rounded-lg border border-white/35 px-5 py-2.5 text-sm font-medium text-white transition hover:border-white/60 hover:bg-white/10"
           >
-            关于我
+            {site.home_promo_btn_about}
           </Link>
         </div>
       </section>

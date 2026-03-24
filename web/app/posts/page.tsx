@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { Metadata } from "next"
 import {
   fetchPostList,
   fetchCategoryList,
@@ -10,9 +11,67 @@ import { PostsPagination } from "@/components/PostsPagination"
 
 type Props = { searchParams: { page?: string; tag?: string; category?: string } }
 
-export const metadata = {
-  title: "文章",
-  description: "全部技术文章与笔记",
+function parseFilters(searchParams: Props["searchParams"]) {
+  const page = Math.max(1, parseInt(searchParams.page || "1", 10) || 1)
+  const tag = searchParams.tag?.trim() || undefined
+  const category = searchParams.category?.trim() || undefined
+  return { page, tag, category }
+}
+
+function buildPostsMetaPath(filters: { page: number; tag?: string; category?: string }): string {
+  const p = new URLSearchParams()
+  if (filters.tag) p.set("tag", filters.tag)
+  if (filters.category) p.set("category", filters.category)
+  if (filters.page > 1) p.set("page", String(filters.page))
+  const s = p.toString()
+  return s ? `/posts?${s}` : "/posts"
+}
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { page, tag, category } = parseFilters(searchParams)
+  const site = await fetchSiteSettings()
+
+  let tagName = tag
+  let categoryName = category
+  try {
+    const [cats, tags] = await Promise.all([fetchCategoryList(), fetchTagList()])
+    if (tag) {
+      const hit = tags.find((t) => t.slug === tag)
+      if (hit?.name) tagName = hit.name
+    }
+    if (category) {
+      const hit = cats.find((c) => c.slug === category)
+      if (hit?.name) categoryName = hit.name
+    }
+  } catch {
+    // 忽略分类/标签名解析失败，降级用 slug
+  }
+
+  const pieces = ["文章"]
+  if (categoryName) pieces.push(`分类：${categoryName}`)
+  if (tagName) pieces.push(`标签：${tagName}`)
+  if (page > 1) pieces.push(`第 ${page} 页`)
+  const title = pieces.join(" · ")
+
+  const descFilters: string[] = []
+  if (categoryName) descFilters.push(`分类「${categoryName}」`)
+  if (tagName) descFilters.push(`标签「${tagName}」`)
+  const description =
+    descFilters.length > 0
+      ? `${site.site_name} 文章列表（${descFilters.join("、")}）${page > 1 ? `，第 ${page} 页` : ""}。`
+      : `全部技术文章与笔记${page > 1 ? `（第 ${page} 页）` : ""}。`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: buildPostsMetaPath({ page, tag, category }),
+    },
+    robots: {
+      index: page <= 1,
+      follow: true,
+    },
+  }
 }
 
 function buildQuery(base: Record<string, string | undefined>, page: number): string {
@@ -25,10 +84,8 @@ function buildQuery(base: Record<string, string | undefined>, page: number): str
 }
 
 export default async function PostsPage({ searchParams }: Props) {
-  const page = Math.max(1, parseInt(searchParams.page || "1", 10) || 1)
+  const { page, tag, category } = parseFilters(searchParams)
   const pageSize = 12
-  const tag = searchParams.tag?.trim() || undefined
-  const category = searchParams.category?.trim() || undefined
 
   let data = { items: [] as Awaited<ReturnType<typeof fetchPostList>>["items"], total: 0, page: 1, page_size: pageSize }
   let categories: Awaited<ReturnType<typeof fetchCategoryList>> = []

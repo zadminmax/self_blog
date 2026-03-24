@@ -140,6 +140,26 @@ type SiteSetting struct {
 	AboutLead  string `gorm:"size:512;default:''" json:"about_lead"`
 	AboutBody  string `gorm:"type:text" json:"about_body"`
 
+	// 首页文案（单页多区块，留空则前台用内置默认）
+	HomeHeroTitle            string `gorm:"size:512;default:''" json:"home_hero_title"`
+	HomeHeroLead             string `gorm:"type:text" json:"home_hero_lead"`
+	HomeHeroBtnPosts         string `gorm:"size:64;default:''" json:"home_hero_btn_posts"`
+	HomeHeroBtnDemos         string `gorm:"size:64;default:''" json:"home_hero_btn_demos"`
+	HomeSidebarNavTitle      string `gorm:"size:128;default:''" json:"home_sidebar_nav_title"`
+	HomeSectionTagsTitle     string `gorm:"size:128;default:''" json:"home_section_tags_title"`
+	HomeSectionTagsHint      string `gorm:"size:256;default:''" json:"home_section_tags_hint"`
+	HomeSectionPostsTitle    string `gorm:"size:128;default:''" json:"home_section_posts_title"`
+	HomeSectionPostsMore     string `gorm:"size:64;default:''" json:"home_section_posts_more"`
+	HomeSectionDemosTitle    string `gorm:"size:128;default:''" json:"home_section_demos_title"`
+	HomeSectionDemosMore     string `gorm:"size:64;default:''" json:"home_section_demos_more"`
+	HomeSectionServicesTitle string `gorm:"size:128;default:''" json:"home_section_services_title"`
+	HomeSectionServicesSub   string `gorm:"size:512;default:''" json:"home_section_services_sub"`
+	HomeSectionServicesMore  string `gorm:"size:64;default:''" json:"home_section_services_more"`
+	HomePromoTitle           string `gorm:"size:256;default:''" json:"home_promo_title"`
+	HomePromoLead            string `gorm:"type:text" json:"home_promo_lead"`
+	HomePromoBtnServices     string `gorm:"size:64;default:''" json:"home_promo_btn_services"`
+	HomePromoBtnAbout        string `gorm:"size:64;default:''" json:"home_promo_btn_about"`
+
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

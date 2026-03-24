@@ -1,0 +1,7 @@
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY deploy/artifacts/api /app/api
+RUN chmod +x /app/api
+EXPOSE 8080
+ENTRYPOINT ["/app/api"]

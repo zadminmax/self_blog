@@ -2,6 +2,8 @@ package config
 
 import (
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -32,7 +34,7 @@ func Load() *Config {
 	c := &Config{
 		Env:            get("APP_ENV", "development"),
 		HTTPAddr:       get("HTTP_ADDR", ":8080"),
-		DatabaseURL:    get("DATABASE_URL", ""),
+		DatabaseURL:    resolveDatabaseURL(),
 		UseSQLite:      get("USE_SQLITE", "true") == "true",
 		SQLitePath:     get("SQLITE_PATH", "data/selfblog.db"),
 		JWTSecret:      get("JWT_SECRET", "dev-change-me-in-production"),
@@ -59,6 +61,32 @@ func Load() *Config {
 		c.UseSQLite = false
 	}
 	return c
+}
+
+// resolveDatabaseURL 优先 DATABASE_URL（自行保证密码已 URL 编码）；否则用 DB_HOST 等分项组装，避免密码里的 @ # $ : 破坏拼接。
+func resolveDatabaseURL() string {
+	if v := strings.TrimSpace(os.Getenv("DATABASE_URL")); v != "" {
+		return v
+	}
+	host := strings.TrimSpace(os.Getenv("DB_HOST"))
+	if host == "" {
+		return ""
+	}
+	user := get("DB_USER", "selfblog")
+	pass := os.Getenv("DB_PASSWORD")
+	dbname := get("DB_NAME", "selfblog")
+	port := get("DB_PORT", "5432")
+	sslmode := get("DB_SSLMODE", "disable")
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(user, pass),
+		Host:   net.JoinHostPort(host, port),
+		Path:   "/" + dbname,
+	}
+	q := url.Values{}
+	q.Set("sslmode", sslmode)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 func get(k, def string) string {

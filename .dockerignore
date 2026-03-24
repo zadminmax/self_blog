@@ -1,0 +1,7 @@
+.git
+web
+backend
+admin/node_modules
+admin/dist
+# 勿用 **/node_modules：会排除 deploy/artifacts/web/node_modules，Next standalone 运行时仍需要其中的 next 等包
+node_modules

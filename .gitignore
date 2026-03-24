@@ -17,3 +17,11 @@ web/out/
 
 deploy/nginx/generated/*
 !deploy/nginx/generated/.gitkeep
+
+# 本地构建产物（上传服务器；勿提交）
+deploy/artifacts/*
+!deploy/artifacts/.gitkeep
+deploy/.env.build
+
+# 本机 rsync 目标（含服务器地址）；从 rsync-upload.example.sh 复制
+deploy/rsync-upload.local.sh
